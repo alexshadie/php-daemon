@@ -1,0 +1,19 @@
+{
+    "name": "alexshadie/php-daemon",
+    "description": "Daemon routines for php",
+    "license": "Beerware",
+    "authors": [
+        {
+            "name": "Alex Tolmachyov",
+            "email": "alex@astra.ws"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "PhpDaemon\\": [
+                "src/PhpDaemon"
+            ]
+        }
+    }
+}
