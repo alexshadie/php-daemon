@@ -38,6 +38,7 @@ class Daemon {
      * @var string
      */
     private $daemonId;
+    private $sleepTime = 1;
     /**
      * Daemon constructor.
      * @param $job
