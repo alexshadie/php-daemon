@@ -9,13 +9,22 @@
  */
 include __DIR__ . "/../vendor/autoload.php";
 use PhpDaemon\Daemon\Daemon;
+use PhpDaemon\Job\Job;
 
-$daemon = new Daemon(function() {
-    $limit = rand(2, 7);
-    for ($i = 0; $i < $limit; $i++) {
-        echo "$i ";
-        sleep(1);
+class MyJob extends Job {
+    public function run() {
+        $limit = rand(2, 7);
+        for ($i = 0; $i < $limit; $i++) {
+            echo "$i ";
+            sleep(1);
+        }
     }
-}, 3);
+}
+
+$daemon = new Daemon(
+    MyJob::class,
+    3,
+    '/tmp/example-app.pid'
+);
 
 $daemon->start();
