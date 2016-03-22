@@ -37,37 +37,52 @@ class Daemon {
      *
      * @var string
      */
-    private $pidFile;
+    private $daemonId;
     /**
      * Daemon constructor.
      * @param $job
      * @param int $jobLimit
-     * @param string $pidFile
+     * @param string $daemonId
      */
-    public function __construct($job, $jobLimit, $pidFile = null) {
+    public function __construct($job, $jobLimit, $daemonId) {
+        global $STDIN, $STDOUT, $STDERR;
         $this->job = $job;
         $this->jobLimit = $jobLimit;
-        if (is_null($pidFile)) {
-            $pidFile = str_replace(['.', '/'], '_', __FILE__);
-        }
-        $this->pidFile = $pidFile;
+        $this->daemonId = $daemonId;
 
         pcntl_signal(SIGHUP, [$this, 'signalSighup']);
         pcntl_signal(SIGTERM, [$this, 'signalSigterm']);
         pcntl_signal(SIGINT, [$this, 'signalSigint']);
         pcntl_signal(SIGUSR1, [$this, 'signalSigusr1']);
         pcntl_signal(SIGUSR2, [$this, 'signalSigusr2']);
+
+        ini_set('error_log', $this->getWorkDir() .'/' . $this->daemonId . '.error.log');
+        fclose(STDIN);
+        fclose(STDOUT);
+        fclose(STDERR);
+        $STDIN = fopen('/dev/null', 'r');
+        $STDOUT = fopen($this->getWorkDir() .'/' . $this->daemonId . '.log', 'ab');
+        $STDERR = fopen($this->getWorkDir() .'/' . $this->daemonId . '.stderr.log', 'ab');
+    }
+
+    protected function getPidFilename() {
+        return '/tmp/' . $this->daemonId . '.pid';
+    }
+
+    protected function getWorkDir() {
+        return '/tmp/';
     }
 
     protected function isActive() {
-        if (is_file($this->pidFile)) {
-            $pid = file_get_contents($this->pidFile);
+        $pidFile = $this->getPidFilename();
+        if (is_file($pidFile)) {
+            $pid = file_get_contents($pidFile);
 
             if (posix_kill($pid, 0)) {
                 $this->log('Daemon already running', 'crit');
                 return true;
             } else {
-                if (!unlink($this->pidFile)) {
+                if (!unlink($pidFile)) {
                     $this->log('Cannot unlink pid-file', 'crit');
                     exit(-1);
                 }
@@ -80,6 +95,7 @@ class Daemon {
         if ($this->isActive()) {
             exit(0);
         }
+
         $pid = pcntl_fork();
         if ($pid == -1) {
             throw new DaemonException("Fork failed");
@@ -90,12 +106,12 @@ class Daemon {
             exit(0);
         }
         posix_setsid();
-        file_put_contents($this->pidFile, getmypid());
+
+        file_put_contents($this->getPidFilename(), getmypid());
 
         $stopCycle = false;
 
         while (!$stopCycle) {
-            echo "\nTotal jobs: " . count($this->workers) . "\n";
             if (!$this->stopped && count($this->workers) < $this->jobLimit) {
                 $pid = pcntl_fork();
                 if ($pid == -1) {
@@ -108,7 +124,7 @@ class Daemon {
                     exit;
                 }
             } else {
-                sleep(1);
+                sleep($this->sleepTime);
             }
 
             while ($signalPid = pcntl_waitpid(-1, $status, WNOHANG)) {
@@ -126,7 +142,7 @@ class Daemon {
             pcntl_signal_dispatch();
         }
 
-        $this->log("Daemon exit");
+        $this->log("Daemon exit", 'info');
     }
 
     public function log($message, $severity) {

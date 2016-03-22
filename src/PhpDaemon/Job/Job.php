@@ -19,5 +19,9 @@ abstract class Job {
         $this->daemon = $daemon;
     }
 
+    public function log($message, $severity) {
+        $this->daemon->log($message, $severity);
+    }
+
     abstract public function run();
 }

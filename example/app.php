@@ -24,7 +24,7 @@ class MyJob extends Job {
 $daemon = new Daemon(
     MyJob::class,
     3,
-    '/tmp/example-app.pid'
+    'example-app'
 );
 
 $daemon->start();
