@@ -23,6 +23,7 @@ class MyJob extends Job {
 
 $daemon = new Daemon(
     MyJob::class,
+    [],
     3,
     'example-app'
 );

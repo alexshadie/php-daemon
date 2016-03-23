@@ -38,16 +38,25 @@ class Daemon {
      * @var string
      */
     private $daemonId;
+    /**
+     * @var array
+     */
+    private $jobInitParams = [];
+    /**
+     * @var int
+     */
     private $sleepTime = 1;
+
     /**
      * Daemon constructor.
      * @param $job
      * @param int $jobLimit
      * @param string $daemonId
      */
-    public function __construct($job, $jobLimit, $daemonId) {
+    public function __construct($job, $jobInitParams, $jobLimit, $daemonId) {
         global $STDIN, $STDOUT, $STDERR;
         $this->job = $job;
+        $this->jobInitParams = $jobInitParams;
         $this->jobLimit = $jobLimit;
         $this->daemonId = $daemonId;
 
@@ -100,7 +109,6 @@ class Daemon {
         $pid = pcntl_fork();
         if ($pid == -1) {
             throw new DaemonException("Fork failed");
-            exit(1);
         }
         if ($pid) {
             // Master process
@@ -155,9 +163,9 @@ class Daemon {
     }
 
     public function doJob() {
-        $job = new $this->job($this);
+        $job = new $this->job($this, $this->jobInitParams);
         if (!$job instanceof Job) {
-            throw new Exception("Invalid job");
+            throw new \Exception("Invalid job");
         }
         $job->run();
     }
