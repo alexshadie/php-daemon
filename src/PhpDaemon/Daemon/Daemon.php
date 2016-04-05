@@ -86,16 +86,27 @@ class Daemon {
     protected function isActive() {
         $pidFile = $this->getPidFilename();
         if (is_file($pidFile)) {
-            $pid = file_get_contents($pidFile);
-
-            if (posix_kill($pid, 0)) {
-                $this->log('Daemon already running', 'crit');
-                return true;
+            $file = fopen($pidFile, 'c');
+            if (!$file) {
+                return false;
+            }
+            $res = flock($file, LOCK_EX | LOCK_NB);
+            if ($res) {
+                flock($file, LOCK_UN);
+                fclose($file);
             } else {
-                if (!unlink($pidFile)) {
-                    $this->log('Cannot unlink pid-file', 'crit');
-                    exit(-1);
+                fclose($file);
+
+                $pid = file_get_contents($pidFile);
+
+                if (posix_kill($pid, 0)) {
+                    $this->log('Daemon already running', 'crit');
+                    return true;
                 }
+            }
+            if (!unlink($pidFile)) {
+                $this->log('Cannot unlink pid-file', 'crit');
+                exit(-1);
             }
         }
         return false;
@@ -116,7 +127,9 @@ class Daemon {
         }
         posix_setsid();
 
-        file_put_contents($this->getPidFilename(), getmypid());
+        $file = fopen($this->getPidFilename(), 'w');
+        flock($file, LOCK_SH);
+        fputs($file, getmypid());
 
         $stopCycle = false;
 
@@ -150,6 +163,10 @@ class Daemon {
 
             pcntl_signal_dispatch();
         }
+
+        flock($file, LOCK_UN);
+        fclose($file);
+        unlink($this->getPidFilename());
 
         $this->log("Daemon exit", 'info');
     }
