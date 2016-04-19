@@ -46,12 +46,21 @@ class Daemon {
      * @var int
      */
     private $sleepTime = 1;
+    /**
+     * @var bool
+     */
+    private $debug = false;
+    /**
+     * @var string
+     */
+    private $mode = 'daemon';
 
     /**
      * Daemon constructor.
-     * @param $job
+     * @param string $job
+     * @param array $jobInitParams
      * @param int $jobLimit
-     * @param string $daemonId
+     * @param int $daemonId
      */
     public function __construct($job, $jobInitParams, $jobLimit, $daemonId) {
         global $STDIN, $STDOUT, $STDERR;
@@ -60,27 +69,40 @@ class Daemon {
         $this->jobLimit = $jobLimit;
         $this->daemonId = $daemonId;
 
+        $options = getopt('', ['debug', 'mode:']);
+        $this->debug = isset($options['debug']) ? true : false;
+        if (isset($options['mode']) && $options['mode'] == 'worker') {
+            $this->mode = 'worker';
+        } else {
+            $this->mode = 'daemon';
+        }
         pcntl_signal(SIGHUP, [$this, 'signalSighup']);
         pcntl_signal(SIGTERM, [$this, 'signalSigterm']);
         pcntl_signal(SIGINT, [$this, 'signalSigint']);
         pcntl_signal(SIGUSR1, [$this, 'signalSigusr1']);
         pcntl_signal(SIGUSR2, [$this, 'signalSigusr2']);
 
-        ini_set('error_log', $this->getWorkDir() .'/' . $this->daemonId . '.error.log');
-        fclose(STDIN);
-        fclose(STDOUT);
-        fclose(STDERR);
-        $STDIN = fopen('/dev/null', 'r');
-        $STDOUT = fopen($this->getWorkDir() .'/' . $this->daemonId . '.log', 'ab');
-        $STDERR = fopen($this->getWorkDir() .'/' . $this->daemonId . '.stderr.log', 'ab');
+        ini_set('error_log', $this->getWorkDir() . 'error.log');
+        if (!$this->debug) {
+            fclose(STDIN);
+            fclose(STDOUT);
+            fclose(STDERR);
+            $STDIN = fopen('/dev/null', 'r');
+            $STDOUT = fopen($this->getWorkDir() . 'stdout.log', 'ab');
+            $STDERR = fopen($this->getWorkDir() . 'stderr.log', 'ab');
+        }
     }
 
     protected function getPidFilename() {
-        return '/tmp/' . $this->daemonId . '.pid';
+        return $this->getWorkDir() . $this->daemonId . '.pid';
     }
 
     protected function getWorkDir() {
-        return '/tmp/';
+        $dir = '/tmp/' . $this->daemonId . '/';
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        return $dir;
     }
 
     protected function isActive() {
@@ -133,6 +155,10 @@ class Daemon {
 
         $stopCycle = false;
 
+        if ($this->mode == 'worker') {
+            $this->jobLimit = 1;
+        }
+
         while (!$stopCycle) {
             if (!$this->stopped && count($this->workers) < $this->jobLimit) {
                 $pid = pcntl_fork();
@@ -147,6 +173,10 @@ class Daemon {
                 }
             } else {
                 sleep($this->sleepTime);
+            }
+
+            if ($this->mode == 'worker') {
+                $this->stopped = true;
             }
 
             while ($signalPid = pcntl_waitpid(-1, $status, WNOHANG)) {
@@ -168,7 +198,7 @@ class Daemon {
         fclose($file);
         unlink($this->getPidFilename());
 
-        $this->log("Daemon exit", 'info');
+        $this->log("Daemon control thread exit", 'info');
     }
 
     public function log($message, $severity) {
