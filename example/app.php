@@ -11,6 +11,18 @@ include __DIR__ . "/../vendor/autoload.php";
 use PhpDaemon\Daemon\Daemon;
 use PhpDaemon\Job\Job;
 
+class MyLogger extends \Psr\Log\AbstractLogger
+{
+    public function log($level, $message, array $context = array())
+    {
+        echo " * " . date('Y-m-d H:i:s') . "\t[{$level}]\t{$message}\n";
+        if ($context) {
+            var_dump($context);
+        }
+    }
+
+}
+
 class MyJob extends Job {
     public function run() {
         $limit = rand(2, 7);
@@ -25,7 +37,9 @@ $daemon = new Daemon(
     MyJob::class,
     [],
     3,
-    'example-app'
+    'example-app',
+    '/tmp/example-app/',
+    new MyLogger()
 );
 
 $daemon->start();

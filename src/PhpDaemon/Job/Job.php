@@ -11,16 +11,21 @@
 namespace PhpDaemon\Job;
 
 use PhpDaemon\Daemon\Daemon;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
-abstract class Job {
+abstract class Job implements LoggerAwareInterface
+{
+    use LoggerAwareTrait;
+
     protected $daemon;
 
-    public function __construct(Daemon $daemon) {
+    public function __construct(Daemon $daemon, ?LoggerInterface $logger)
+    {
         $this->daemon = $daemon;
-    }
-
-    public function log($message, $severity) {
-        $this->daemon->log($message, $severity);
+        $this->setLogger($logger ?? new NullLogger());
     }
 
     abstract public function run();

@@ -11,6 +11,7 @@
 namespace PhpDaemon\Daemon;
 
 
-class DaemonException extends \Exception {
+class DaemonException extends \Exception
+{
 
 }

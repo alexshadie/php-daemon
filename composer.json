@@ -8,7 +8,10 @@
             "email": "alex@astra.ws"
         }
     ],
-    "require": {},
+    "require": {
+        "php": "^7.1",
+        "psr/log": "^1.0"
+    },
     "autoload": {
         "psr-4": {
             "PhpDaemon\\": [
