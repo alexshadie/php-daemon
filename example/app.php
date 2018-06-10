@@ -9,7 +9,7 @@
  */
 include __DIR__ . "/../vendor/autoload.php";
 use PhpDaemon\Daemon\Daemon;
-use PhpDaemon\Job\Job;
+use PhpDaemon\Job\DaemonJob;
 
 class MyLogger extends \Psr\Log\AbstractLogger
 {
@@ -23,7 +23,7 @@ class MyLogger extends \Psr\Log\AbstractLogger
 
 }
 
-class MyJob extends Job {
+class MyDaemonJob extends DaemonJob {
     public function run() {
         $limit = rand(2, 7);
         for ($i = 0; $i < $limit; $i++) {
@@ -34,7 +34,7 @@ class MyJob extends Job {
 }
 
 $daemon = new Daemon(
-    MyJob::class,
+    MyDaemonJob::class,
     [],
     3,
     'example-app',

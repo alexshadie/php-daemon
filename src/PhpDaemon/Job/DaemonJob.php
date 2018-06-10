@@ -16,7 +16,7 @@ use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-abstract class Job implements LoggerAwareInterface
+abstract class DaemonJob implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 

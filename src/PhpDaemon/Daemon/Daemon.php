@@ -10,7 +10,7 @@
 
 namespace PhpDaemon\Daemon;
 
-use PhpDaemon\Job\Job;
+use PhpDaemon\Job\DaemonJob;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -68,7 +68,7 @@ class Daemon implements LoggerAwareInterface
 
         $this->setLogger($logger ?? new NullLogger());
 
-        if (!is_subclass_of($jobClass, Job::class)) {
+        if (!is_subclass_of($jobClass, DaemonJob::class)) {
             $this->logger->critical("Passed job class '{$jobClass}' is not subclass of job");
             throw new DaemonException("Invalid Job class");
         }
@@ -230,7 +230,7 @@ class Daemon implements LoggerAwareInterface
     public function doJob()
     {
         $job = new $this->jobClass($this, $this->logger, $this->jobInitParams);
-        if (!$job instanceof Job) {
+        if (!$job instanceof DaemonJob) {
             throw new \Exception("Invalid job");
         }
         $job->run();
